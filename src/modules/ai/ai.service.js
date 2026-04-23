@@ -1,25 +1,20 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as analyticsService from "../analytics/analytics.service.js";
 
-// Initialize OpenAI. Make sure OPENAI_API_KEY is available in your environment variables.
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Google Generative AI with GEMINI_API_KEY
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const categorizeTransaction = async (description) => {
-  const prompt = `Categorize the following transaction description into a single generic category word (e.g., Food, Transport, Utilities, Entertainment, Salary, Health, Shopping, etc.):\n\nDescription: "${description}"\n\nCategory:`;
+  const prompt = `Categorize the following transaction description into a single generic category word (e.g., Food, Transport, Utilities, Entertainment, Salary, Health, Shopping, etc.):\n\nDescription: "${description}"\n\nReturn only the category name string, no punctuation.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Switch to gpt-4 or gpt-4o if preferred
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 10,
-      temperature: 0.3, // Low temperature for more deterministic/consistent categorization
-    });
-    return response.choices[0].message.content.trim();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
   } catch (error) {
-    console.error("OpenAI Error:", error);
-    return "Uncategorized"; // Graceful fallback if AI fails or rate limits
+    console.error("Gemini AI Error (Categorization):", error);
+    return "Uncategorized";
   }
 };
 
@@ -28,30 +23,29 @@ export const generateInsights = async (userId, year, month) => {
   const breakdown = await analyticsService.getCategoryBreakdown(userId, year, month, "expense");
   const summary = await analyticsService.getMonthlySummary(userId, year, month);
 
-  const prompt = `Analyze this personal finance data for month ${month}/${year}:\nIncome: ${summary.income}\nExpense: ${summary.expense}\nCategory Breakdown: ${JSON.stringify(breakdown)}\n\nProvide 2 to 3 short, actionable financial insights or advice based on their spending habits. Use a supportive and professional tone.`;
+  const prompt = `Analyze this personal finance data for month ${month}/${year}:
+  Income: ${summary.income}
+  Expense: ${summary.expense}
+  Category Breakdown: ${JSON.stringify(breakdown)}
+  
+  Provide 2 to 3 short, actionable financial insights or advice based on their spending habits. Use a supportive and professional tone. Return the response in a concise format.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 150,
-      temperature: 0.7, // Slightly higher for natural text generation
-    });
-    return response.choices[0].message.content.trim();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
   } catch (error) {
-    console.error("OpenAI Error:", error);
+    console.error("Gemini AI Error (Insights):", error);
     return "We are currently unable to generate insights at the moment. Keep tracking your expenses!";
   }
 };
 
 export const checkBudgetCrossing = async (userId, year, month, categoryBudgets) => {
-  // categoryBudgets is expected to be a key-value object: { "Food": 1500000, "Transport": 500000 }
   const breakdown = await analyticsService.getCategoryBreakdown(userId, year, month, "expense");
   const notifications = [];
 
   for (const item of breakdown) {
     const budgetLimit = categoryBudgets[item.category];
-    // If the category has a budget limit AND the spent amount exceeds it
     if (budgetLimit && item.totalAmount > budgetLimit) {
       notifications.push({
         category: item.category,
