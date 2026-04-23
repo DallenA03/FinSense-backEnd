@@ -42,3 +42,7 @@ Thumbs.db
 # Temp files
 tmp/
 temp/
+
+# Google Cloud credentials
+src/config/credentials/
+

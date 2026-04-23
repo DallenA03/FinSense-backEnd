@@ -1,84 +1,57 @@
+import { User } from "./auth.model.js";
 import { generateToken } from "../../common/utils/token.js";
-import { createUser, findUserByEmail, findUserById } from "./auth.repository.js";
+import { verifyFirebaseToken } from "../../common/utils/firebaseAuth.js";
+import { saveEmailOAuth } from "../email/email.service.js";
 
-export const registerUser = async (data) => {
-  const existingUser = await findUserByEmail(data.email);
-  if (existingUser) {
-    const error = new Error("User already exists with this email");
-    error.statusCode = 400; // Will be caught by error middleware
-    throw error;
-  }
+/**
+ * Handles Firebase Login (via Google or Email) from Mobile/Flutter
+ * Verifies idToken and creates/updates user and email connection
+ */
+export const firebaseLoginService = async ({ idToken, accessToken, refreshToken, expiryDate }) => {
+  const firebaseUser = await verifyFirebaseToken(idToken);
 
-  const user = await createUser(data);
+  let user = await User.findOne({ firebaseUid: firebaseUser.uid });
 
-  const token = generateToken(user._id);
-
-  return {
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    },
-    token,
-  };
-};
-
-export const loginUser = async (data) => {
-  const user = await findUserByEmail(data.email);
   if (!user) {
-    const error = new Error("Invalid credentials");
-    error.statusCode = 401;
-    throw error;
+    user = await User.create({
+      name: firebaseUser.name,
+      email: firebaseUser.email,
+      firebaseUid: firebaseUser.uid,
+      emailVerified: firebaseUser.emailVerified,
+      provider: "google", // or determine from firebaseUser
+    });
+  } else {
+    // Update user info
+    user.name = firebaseUser.name;
+    user.emailVerified = firebaseUser.emailVerified;
+    await user.save();
   }
 
-  const isPasswordMatch = await user.comparePassword(data.password);
-  if (!isPasswordMatch) {
-    const error = new Error("Invalid credentials");
-    error.statusCode = 401;
-    throw error;
+  // If mobile also provided access/refresh tokens for Gmail/Outlook access
+  if (accessToken) {
+    await saveEmailOAuth({
+      userId: user._id,
+      email: user.email,
+      accessToken,
+      refreshToken,
+      expiryDate
+    });
   }
 
-  const token = generateToken(user._id);
+  const token = generateToken({ id: user._id });
 
   return {
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    },
+    user,
     token,
   };
 };
 
 export const getUserProfile = async (userId) => {
-  const user = await findUserById(userId);
+  const user = await User.findById(userId);
   if (!user) {
     const error = new Error("User not found");
     error.statusCode = 404;
     throw error;
   }
   return user;
-};
-
-export const resetPassword = async (data) => {
-  const user = await findUserByEmail(data.email);
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const isPasswordMatch = await user.comparePassword(data.password);
-  if (!isPasswordMatch) {
-    const error = new Error("Invalid credentials");
-    error.statusCode = 401;
-    throw error;
-  }
-
-  user.password = data.newPassword;
-  await user.save();
-
-  return {
-    message: "Password reset successfully",
-  };
 };
