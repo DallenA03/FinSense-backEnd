@@ -1,4 +1,5 @@
 import { catchAsync } from "../../common/utils/catchAsync.js";
+import { successResponse } from "../../common/utils/response.js";
 import { registerUser, loginUser, getUserProfile, resetPassword } from "./auth.service.js";
 
 // @desc    Register new user
@@ -6,12 +7,7 @@ import { registerUser, loginUser, getUserProfile, resetPassword } from "./auth.s
 // @access  Public
 export const register = catchAsync(async (req, res) => {
   const result = await registerUser(req.body);
-
-  res.status(201).json({
-    success: true,
-    message: "User registered successfully",
-    data: result,
-  });
+  return successResponse(res, 201, "User registered successfully", result);
 });
 
 // @desc    Login user
@@ -19,26 +15,15 @@ export const register = catchAsync(async (req, res) => {
 // @access  Public
 export const login = catchAsync(async (req, res) => {
   const result = await loginUser(req.body);
-
-  res.status(200).json({
-    success: true,
-    message: "Login successful",
-    data: result,
-  });
+  return successResponse(res, 200, "Login successful", result);
 });
 
 // @desc    Get current user profile
 // @route   GET /api/v1/auth/me
 // @access  Private
 export const getMe = catchAsync(async (req, res) => {
-  // req.user logic is populated by authMiddleware
   const user = await getUserProfile(req.user.id);
-
-  res.status(200).json({
-    success: true,
-    message: "User profile fetched successfully",
-    data: { user },
-  });
+  return successResponse(res, 200, "User profile fetched successfully", { user });
 });
 
 // @desc    Reset Password
@@ -46,10 +31,5 @@ export const getMe = catchAsync(async (req, res) => {
 // @access  Public
 export const resetPassword = catchAsync(async (req, res) => {
   const result = await resetPassword(req.body);
-
-  res.status(200).json({
-    success: true,
-    message: "Password reset successfully",
-    data: result,
-  });
+  return successResponse(res, 200, "Password reset successfully", result);
 });

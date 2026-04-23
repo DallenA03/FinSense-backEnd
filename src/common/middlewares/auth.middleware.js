@@ -1,16 +1,19 @@
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../../config/env.js";
+import { verifyToken } from "../utils/token.js";
+import { errorResponse } from "../utils/response.js";
 
 export const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization;
+  let token = req.headers.authorization;
 
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
+  if (token && token.startsWith("Bearer ")) {
+    token = token.split(" ")[1];
   }
+
+  if (!token) return errorResponse(res, 401, "Unauthorized! No Token Provided");
+
+  const decoded = verifyToken(token);
+  
+  if (!decoded) return errorResponse(res, 401, "Unauthorized! Token is invalid or expired");
+
+  req.user = decoded;
+  next();
 };

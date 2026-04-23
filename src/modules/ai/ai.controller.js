@@ -1,4 +1,5 @@
 import { catchAsync } from "../../common/utils/catchAsync.js";
+import { successResponse, errorResponse } from "../../common/utils/response.js";
 import * as aiService from "./ai.service.js";
 
 // @desc    Categorize a transaction using AI
@@ -8,16 +9,11 @@ export const categorizeTx = catchAsync(async (req, res) => {
   const { description } = req.body;
   
   if (!description) {
-    return res.status(400).json({ success: false, message: "Description is required" });
+    return errorResponse(res, 400, "Description is required");
   }
 
   const category = await aiService.categorizeTransaction(description);
-
-  res.status(200).json({
-    success: true,
-    message: "Categorization successful",
-    data: { category },
-  });
+  return successResponse(res, 200, "Categorization successful", { category });
 });
 
 // @desc    Generate personalized financial insights
@@ -28,12 +24,7 @@ export const getInsights = catchAsync(async (req, res) => {
   const month = req.query.month || new Date().getMonth() + 1;
 
   const insights = await aiService.generateInsights(req.user.id, year, month);
-
-  res.status(200).json({
-    success: true,
-    message: "Insights generated successfully",
-    data: { insights },
-  });
+  return successResponse(res, 200, "Insights generated successfully", { insights });
 });
 
 // @desc    Check if expenses cross monthly budget and generate notifications
@@ -45,14 +36,9 @@ export const checkBudgets = catchAsync(async (req, res) => {
   const { budgets } = req.body; // Expects an object mapping category to budget limit
   
   if (!budgets) {
-    return res.status(400).json({ success: false, message: "Budgets object is required" });
+    return errorResponse(res, 400, "Budgets object is required");
   }
 
   const notifications = await aiService.checkBudgetCrossing(req.user.id, year, month, budgets);
-
-  res.status(200).json({
-    success: true,
-    message: "Budget evaluation complete",
-    data: { notifications },
-  });
+  return successResponse(res, 200, "Budget evaluation complete", { notifications });
 });

@@ -1,10 +1,5 @@
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../../config/env.js";
+import { generateToken } from "../../common/utils/token.js";
 import { createUser, findUserByEmail, findUserById } from "./auth.repository.js";
-
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "7d" });
-};
 
 export const registerUser = async (data) => {
   const existingUser = await findUserByEmail(data.email);

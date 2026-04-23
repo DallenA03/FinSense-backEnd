@@ -1,3 +1,4 @@
+import { errorResponse } from "../utils/response.js";
 import { NODE_ENV } from "../../config/env.js";
 
 export const errorMiddleware = (err, req, res, next) => {
@@ -10,7 +11,7 @@ export const errorMiddleware = (err, req, res, next) => {
     statusCode = 404;
   }
 
-  // Mongoose duplicate key (usually from unique index in schema)
+  // Mongoose duplicate key
   if (err.code === 11000) {
     message = `Duplicate field value entered: ${Object.keys(err.keyValue)}`;
     statusCode = 400;
@@ -18,7 +19,7 @@ export const errorMiddleware = (err, req, res, next) => {
 
   // Mongoose validation error
   if (err.name === "ValidationError") {
-    message = Object.values(err.errors).map(val => val.message).join(", ");
+    message = Object.values(err.errors).map((val) => val.message).join(", ");
     statusCode = 400;
   }
 
@@ -33,9 +34,7 @@ export const errorMiddleware = (err, req, res, next) => {
     statusCode = 401;
   }
 
-  res.status(statusCode).json({
-    success: false,
-    message,
+  return errorResponse(res, statusCode, message, {
     stack: NODE_ENV === "development" ? err.stack : undefined,
   });
 };

@@ -1,4 +1,5 @@
 import { catchAsync } from "../../common/utils/catchAsync.js";
+import { successResponse } from "../../common/utils/response.js";
 import * as analyticsService from "./analytics.service.js";
 
 // @desc    Get monthly summary (income vs expense vs balance)
@@ -9,12 +10,7 @@ export const getMonthlySummary = catchAsync(async (req, res) => {
   const month = req.query.month || new Date().getMonth() + 1; // 1 to 12
 
   const result = await analyticsService.getMonthlySummary(req.user.id, year, month);
-
-  res.status(200).json({
-    success: true,
-    message: "Monthly summary fetched successfully",
-    data: result,
-  });
+  return successResponse(res, 200, "Monthly summary fetched successfully", result);
 });
 
 // @desc    Get category breakdown
@@ -23,13 +19,8 @@ export const getMonthlySummary = catchAsync(async (req, res) => {
 export const getCategoryBreakdown = catchAsync(async (req, res) => {
   const year = req.query.year || new Date().getFullYear();
   const month = req.query.month || new Date().getMonth() + 1;
-  const type = req.query.type || "expense"; // default to analyzing expenses
+  const type = req.query.type || "expense";
 
   const result = await analyticsService.getCategoryBreakdown(req.user.id, year, month, type);
-
-  res.status(200).json({
-    success: true,
-    message: "Category breakdown fetched successfully",
-    data: result,
-  });
+  return successResponse(res, 200, "Category breakdown fetched successfully", result);
 });
