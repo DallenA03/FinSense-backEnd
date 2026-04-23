@@ -101,6 +101,7 @@ Rules:
 
 * Categorize transaction
 * Generate insights
+* Give notification to user when expense crosses their monthly budget in any category
 
 ---
 
